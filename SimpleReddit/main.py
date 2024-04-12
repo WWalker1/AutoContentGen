@@ -4,8 +4,6 @@ from reddit_scraping import pull_posts
 import random
 import pandas as pd
 from typing import List
-import os
-from textgrid import TextGrid
 
 def generate_tts_audio(script, output_path):
     tts = gTTS(text=script, lang='en')
@@ -56,30 +54,15 @@ def split_into_phrases(words, max_words_per_phrase):
         phrases.append(' '.join(current_phrase))
     return phrases
 
-def force_align(audio_path, script):
-    # Save the script to a temporary file
-    with open('temp_script.txt', 'w') as f:
-        f.write(script)
-
-    # Run the Montreal Forced Aligner
-    os.system(f'mfa align temp_script.txt {audio_path} english aligned_output')
-
-    # Load the aligned TextGrid
-    textgrid = TextGrid.fromFile('aligned_output/temp_script.TextGrid')
-
-    # Extract the aligned phrases and their durations
-    aligned_phrases = []
-    for phrase in textgrid.getList('phones'):
-        start_time = phrase.minTime
-        end_time = phrase.maxTime
-        text = phrase.mark
-        aligned_phrases.append((text, start_time, end_time))
-
-    # Clean up temporary files
-    os.remove('temp_script.txt')
-    os.system('rm -rf aligned_output')
-
-    return aligned_phrases
+def estimate_phrase_durations(phrases, audio_duration, words_per_minute=200):
+    total_words = sum(len(phrase.split()) for phrase in phrases)
+    words_per_second = words_per_minute / 60
+    duration_per_word = 1 / words_per_second
+    phrase_durations = [len(phrase.split()) * duration_per_word for phrase in phrases]
+    total_duration = sum(phrase_durations)
+    scale_factor = audio_duration / total_duration
+    scaled_durations = [duration * scale_factor for duration in phrase_durations]
+    return scaled_durations
 
 # Main script
 if __name__ == '__main__':
@@ -98,15 +81,7 @@ if __name__ == '__main__':
     audio_clip = generate_tts_audio(script, audio_path)
     video_clip = load_video_clip(video_path, audio_clip.duration)
 
-    aligned_phrases = force_align(audio_path, script)
-    phrase_durations = []
-    for phrase in phrases:
-        duration = 0
-        for aligned_phrase in aligned_phrases:
-            if phrase in aligned_phrase[0]:
-                duration += aligned_phrase[2] - aligned_phrase[1]
-        phrase_durations.append(duration)
-
+    phrase_durations = estimate_phrase_durations(phrases, audio_clip.duration)
     text_clips = create_text_clips(phrases, phrase_durations)
     animated_clips = animate_text_clips(text_clips, audio_clip.duration, video_clip.size)
 
