@@ -1,9 +1,10 @@
 from gtts import gTTS
 from moviepy.editor import *
-from reddit_scraping import pull_posts
 import random
 import pandas as pd
 from typing import List
+from reddit_video_creator import pull_posts
+from reddit_video_creator import VideoTranscriber
 
 def generate_tts_audio(script, output_path):
     tts = gTTS(text=script, lang='en')
@@ -69,9 +70,8 @@ if __name__ == '__main__':
     subreddit = "relationship_advice"
     posts: pd.DataFrame = pull_posts(subreddit, 10)
 
-    #script = posts.iloc[2]["Body"]
-    script = "this is an example script. And. I hope that the video plays in time with the words"
-    video_path = "Minecraft_speedrun_background.mp4"
+    script = posts.iloc[2]["Body"]
+    video_path = "video.mp4"
     output_path = "output_video.mp4"
     max_words_per_phrase = 3
 
@@ -87,3 +87,10 @@ if __name__ == '__main__':
 
     final_clip = combine_video_and_text(video_clip, audio_clip, animated_clips)
     export_final_video(final_clip, output_path)
+
+    # Whisper force alignment
+    model_path = "base"
+    transcriber = VideoTranscriber(model_path, output_path)
+    transcriber.extract_audio()
+    transcriber.transcribe_video()
+    transcriber.create_video("final_output.mp4")
