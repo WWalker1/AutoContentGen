@@ -47,6 +47,7 @@ if __name__ == '__main__':
     '''
     script = selected_post.Body
     script = "Hello ben, what kind of workout are you doing today?"
+
     video_path = "video.mp4"
     output_path = "output_video.mp4"
 
