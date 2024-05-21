@@ -41,8 +41,11 @@ print(pull_posts("relationship_advice", 10).iloc[0])
 
 
 FONT = cv2.FONT_HERSHEY_SIMPLEX
-FONT_SCALE = 0.8
-FONT_THICKNESS = 2
+FONT_SCALE = 1.0
+FONT_THICKNESS = 3
+TEXT_COLOR = (255, 255, 255)  # White color
+OUTLINE_COLOR = (0, 0, 0)  # Black color
+OUTLINE_THICKNESS = 5
 
 class VideoTranscriber:
     def __init__(self, model_path, video_path):
@@ -103,10 +106,10 @@ class VideoTranscriber:
                 start = int(len(line) / total_chars * total_frames) + int(start)
                 lines.append(line_array)
                 self.text_array.append(line_array)
-        
+    
         cap.release()
         print('Transcription complete')
-    
+
     def extract_audio(self):
         print('Extracting audio')
         audio_path = os.path.join(os.path.dirname(self.video_path), "audio.mp3")
@@ -134,10 +137,19 @@ class VideoTranscriber:
             for i in self.text_array:
                 if N_frames >= i[1] and N_frames <= i[2]:
                     text = i[0]
-                    text_size, _ = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, 0.8, 2)
+                    text_size, _ = cv2.getTextSize(text, FONT, FONT_SCALE, FONT_THICKNESS)
                     text_x = int((frame.shape[1] - text_size[0]) / 2)
                     text_y = int(height/2)
-                    cv2.putText(frame, text, (text_x, text_y), cv2.FONT_HERSHEY_SIMPLEX, 0.75, (0, 0, 255), 2)
+                    
+                    # Add black outline
+                    for j in range(OUTLINE_THICKNESS):
+                        cv2.putText(frame, text, (text_x-j, text_y), FONT, FONT_SCALE, OUTLINE_COLOR, FONT_THICKNESS)
+                        cv2.putText(frame, text, (text_x+j, text_y), FONT, FONT_SCALE, OUTLINE_COLOR, FONT_THICKNESS)
+                        cv2.putText(frame, text, (text_x, text_y-j), FONT, FONT_SCALE, OUTLINE_COLOR, FONT_THICKNESS)
+                        cv2.putText(frame, text, (text_x, text_y+j), FONT, FONT_SCALE, OUTLINE_COLOR, FONT_THICKNESS)
+                    
+                    # Add white text
+                    cv2.putText(frame, text, (text_x, text_y), FONT, FONT_SCALE, TEXT_COLOR, FONT_THICKNESS)
                     break
             
             cv2.imwrite(os.path.join(output_folder, str(N_frames) + ".jpg"), frame)
