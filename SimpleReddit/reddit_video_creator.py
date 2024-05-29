@@ -6,7 +6,7 @@ import shutil
 import cv2
 from moviepy.editor import ImageSequenceClip, AudioFileClip, VideoFileClip
 from tqdm import tqdm
-
+import base64, json, requests 
 '''
 Params: 
 1. subreddit -> subreddit that it will pull posts from
@@ -48,67 +48,64 @@ OUTLINE_COLOR = (0, 0, 0)  # Black color
 OUTLINE_THICKNESS = 5
 
 class VideoTranscriber:
-    def __init__(self, model_path, video_path):
-        self.model = whisper.load_model(model_path)
+    def __init__(self, video_path, xi_api_key):
         self.video_path = video_path
-        self.audio_path = ''
+        self.audio_path = os.path.join(os.path.dirname(self.video_path), "tts_audio.mp3")
         self.text_array = []
         self.fps = 0
         self.char_width = 0
+        self.xi_api_key = xi_api_key
 
-    def transcribe_video(self):
-        print('Transcribing video')
-        result = self.model.transcribe(self.audio_path)
-        text = result["segments"][0]["text"]
-        textsize = cv2.getTextSize(text, FONT, FONT_SCALE, FONT_THICKNESS)[0]
-        cap = cv2.VideoCapture(self.video_path)
-        width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-        height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        asp = 16/9
-        ret, frame = cap.read()
-        width = frame[:, int(int(width - 1 / asp * height) / 2):width - int((width - 1 / asp * height) / 2)].shape[1]
-        width = width - (width * 0.1)
-        self.fps = cap.get(cv2.CAP_PROP_FPS)
-        self.char_width = int(textsize[0] / len(text))
-        
-        for j in tqdm(result["segments"]):
-            lines = []
-            text = j["text"]
-            end = j["end"]
-            start = j["start"]
-            total_frames = int((end - start) * self.fps)
-            start = start * self.fps
-            total_chars = len(text)
-            words = text.split(" ")
-            i = 0
-            
-            while i < len(words):
-                words[i] = words[i].strip()
-                if words[i] == "":
-                    i += 1
-                    continue
-                length_in_pixels = (len(words[i]) + 1) * self.char_width
-                remaining_pixels = width - length_in_pixels
-                line = words[i] 
-                
-                while remaining_pixels > 0:
-                    i += 1 
-                    if i >= len(words):
-                        break
-                    length_in_pixels = (len(words[i]) + 1) * self.char_width
-                    remaining_pixels -= length_in_pixels
-                    if remaining_pixels < 0:
-                        continue
-                    else:
-                        line += " " + words[i]
-                
-                line_array = [line, int(start) + 15, int(len(line) / total_chars * total_frames) + int(start) + 15]
-                start = int(len(line) / total_chars * total_frames) + int(start)
-                lines.append(line_array)
-                self.text_array.append(line_array)
-    
-        cap.release()
-        print('Transcription complete')
+    def transcribe_video(self, script):
+        print('Generating audio with Eleven Labs API')
+        url = f"https://api.elevenlabs.io/v1/text-to-speech/21m00Tcm4TlvDq8ikWAM/with-timestamps"
+        headers = {
+            "Content-Type": "application/json",
+            "xi-api-key": self.xi_api_key
+        }
+        data = {
+            "text": script,
+            "model_id": "eleven_multilingual_v1",
+            "voice_settings": {
+                "stability": 0.5,
+                "similarity_boost": 0.75
+            }
+        }
+
+        response = requests.post(url, json=data, headers=headers)
+        response.raise_for_status()
+
+        response_dict = response.json()
+        audio_bytes = base64.b64decode(response_dict["audio_base64"])
+        with open(self.audio_path, 'wb') as f:
+            f.write(audio_bytes)
+
+        end_times = response_dict['alignment']['character_end_times_seconds']
+        audio_duration = end_times[-1]  # Get the end time of the last character
+        self.fps = len(end_times) / audio_duration
+
+        self.text_array = []
+        words = response_dict['alignment']['characters']
+        start_times = response_dict['alignment']['character_start_times_seconds']
+
+        current_word = ""
+        start_time = 0
+        for i in range(len(words)):
+            if words[i] == " ":
+                if current_word:
+                    end_time = end_times[i]
+                    self.text_array.append([current_word.strip(), int(start_time * self.fps), int(end_time * self.fps)])
+                    current_word = ""
+            else:
+                if not current_word:
+                    start_time = start_times[i]
+                current_word += words[i]
+
+        if current_word:
+            end_time = end_times[-1]
+            self.text_array.append([current_word.strip(), int(start_time * self.fps), int(end_time * self.fps)])
+
+        print('Audio generation complete')
 
     def extract_audio(self):
         print('Extracting audio')
@@ -160,7 +157,7 @@ class VideoTranscriber:
 
     def create_video(self, output_video_path):
         print('Creating video')
-        image_folder = os.path.join(os.path.dirname(self.video_path), "frames")
+        image_folder = os.path.join(os.path.dirname(self.video_path), "frames") 
         if not os.path.exists(image_folder):
             os.makedirs(image_folder)
         
@@ -173,8 +170,7 @@ class VideoTranscriber:
         height, width, layers = frame.shape
         
         clip = ImageSequenceClip([os.path.join(image_folder, image) for image in images], fps=self.fps)
-        audio = AudioFileClip(self.audio_path)
+        audio = AudioFileClip(self.audio_path)  # Use the generated audio directly
         clip = clip.set_audio(audio)
         clip.write_videofile(output_video_path)
         shutil.rmtree(image_folder)
-        os.remove(os.path.join(os.path.dirname(self.video_path), "audio.mp3"))
