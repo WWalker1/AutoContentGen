@@ -169,8 +169,17 @@ class VideoTranscriber:
         frame = cv2.imread(os.path.join(image_folder, images[0]))
         height, width, layers = frame.shape
         
-        clip = ImageSequenceClip([os.path.join(image_folder, image) for image in images], fps=self.fps)
-        audio = AudioFileClip(self.audio_path)  # Use the generated audio directly
+        # Get the frame rate of the original video
+        original_video = VideoFileClip(self.video_path)
+        original_fps = original_video.fps
+        
+        clip = ImageSequenceClip([os.path.join(image_folder, image) for image in images], fps=original_fps)
+        audio = AudioFileClip(self.audio_path)
+        
+        # Trim the video to match the audio duration
+        video_duration = audio.duration
+        clip = clip.subclip(0, video_duration)
+        
         clip = clip.set_audio(audio)
-        clip.write_videofile(output_video_path)
+        clip.write_videofile(output_video_path, fps=original_fps)
         shutil.rmtree(image_folder)

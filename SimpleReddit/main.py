@@ -17,7 +17,8 @@ def generate_tts_audio(script, output_path, xi_api_key):
         "voice_settings": {
             "stability": 0.5,
             "similarity_boost": 0.5
-        }
+        }, 
+        "playback_speed": 1.25
     }
 
     response = requests.post(url, json=data, headers=headers)
@@ -29,19 +30,25 @@ def generate_tts_audio(script, output_path, xi_api_key):
     return AudioFileClip(output_path)
 
 def load_video_clip(video_path, audio_duration):
-    video = VideoFileClip(video_path)
-    start_time = random.uniform(0, video.duration - audio_duration)
-    end_time = start_time + audio_duration
-    return video.subclip(start_time, end_time)
+       video = VideoFileClip(video_path)
+       video_duration = min(video.duration, audio_duration)
+       start_time = random.uniform(0, max(0, video.duration - video_duration))
+       end_time = start_time + video_duration
+       return video.subclip(start_time, end_time)
 
 def export_final_video(final_clip, output_path):
+    # Trim the video to match the audio duration
+    audio_duration = final_clip.audio.duration
+    video_duration = final_clip.duration
+    if video_duration > audio_duration:
+        final_clip = final_clip.subclip(0, audio_duration)
+    
     final_clip.write_videofile(output_path, fps=24, codec='libx264')
-
 
 
 # Main script
 if __name__ == '__main__':
-    subreddit = "relationship_advice"
+    subreddit = "wsb"
     num_posts = 10
     posts = pull_posts(subreddit, num_posts)
 
@@ -67,7 +74,7 @@ if __name__ == '__main__':
     print(script)
     '''
     script = selected_post.Body
-    script = "I never expected to come home early from work and find my boyfriend in bed with my best friend. Hi everyone, I need some serious advice. A few days ago, I decided to surprise my boyfriend by coming home early from work. We've been together for three years, and I was thinking about taking our relationship to the next level. But as soon as I walked through the door, I heard laughter coming from our bedroom. My heart sank when I opened the door and found my boyfriend in bed with my best friend. I felt like my world had crumbled. They both looked at me, completely shocked, and I could barely process what was happening. I ran out of the house, not knowing what to do. Now, I’m stuck in this whirlwind of emotions. I feel betrayed by two people I trusted the most. I haven’t spoken to either of them since, but they've been blowing up my phone with apologies. Should I hear them out, or is it better to just cut them off completely and move on with my life? I feel so lost and hurt right now. Any advice would be greatly appreciated."
+    script = "Hey Brit. How's the corn and soybean business going?"
 
     video_path = "parkour.mp4"
     output_path = "output_video.mp4"
