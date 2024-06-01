@@ -69,7 +69,7 @@ class VideoTranscriber:
             "voice_settings": {
                 "stability": 0.5,
                 "similarity_boost": 0.75
-            }
+            } 
         }
 
         response = requests.post(url, json=data, headers=headers)
@@ -83,6 +83,9 @@ class VideoTranscriber:
         end_times = response_dict['alignment']['character_end_times_seconds']
         audio_duration = end_times[-1]  # Get the end time of the last character
         self.fps = len(end_times) / audio_duration
+        video = cv2.VideoCapture(self.video_path)
+        self.fps = video.get(cv2.CAP_PROP_FPS)
+        video.release()
 
         self.text_array = []
         words = response_dict['alignment']['characters']

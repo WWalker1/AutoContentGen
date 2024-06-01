@@ -17,8 +17,7 @@ def generate_tts_audio(script, output_path, xi_api_key):
         "voice_settings": {
             "stability": 0.5,
             "similarity_boost": 0.5
-        }, 
-        "playback_speed": 1.25
+        }
     }
 
     response = requests.post(url, json=data, headers=headers)
@@ -48,7 +47,7 @@ def export_final_video(final_clip, output_path):
 
 # Main script
 if __name__ == '__main__':
-    subreddit = "wsb"
+    subreddit = "relationship_advice"
     num_posts = 10
     posts = pull_posts(subreddit, num_posts)
 
@@ -74,7 +73,7 @@ if __name__ == '__main__':
     print(script)
     '''
     script = selected_post.Body
-    script = "Hey Brit. How's the corn and soybean business going?"
+    script = "Hey Brit. How's the corn and soybean business going? We are going to add a more lenghty test to properly test. Ok, done."
 
     video_path = "parkour.mp4"
     output_path = "output_video.mp4"
