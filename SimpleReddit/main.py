@@ -73,9 +73,9 @@ if __name__ == '__main__':
     print(script)
     '''
     script = selected_post.Body
-    script = "Hey Brit. How's the corn and soybean business going? We are going to add a more lenghty test to properly test. Ok, done."
+    script = "lotrs. of. periods. to see if the same. issue. is present. here...ok. cool, and, now done."
 
-    video_path = "parkour.mp4"
+    video_path = "background_videos/parkour.mp4"
     output_path = "output_video.mp4"
 
     XI_API_KEY = "a56e9c8f7a8ffe64d28b0069fc30ca22"
