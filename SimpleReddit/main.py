@@ -47,14 +47,15 @@ def export_final_video(final_clip, output_path):
 
 # Main script
 if __name__ == '__main__':
+    font_path = "fonts/Mont-HeavyDEMO.otf"  # Replace with your actual font file path
     subreddit = "relationship_advice"
     num_posts = 10
-    posts = pull_posts(subreddit, num_posts)
+    #posts = pull_posts(subreddit, num_posts)
 
     print("Select a post to generate a video:")
-    for i, post in enumerate(posts.itertuples(index=False), start=1):
-        print(f"{i}. {post.Title}")
-
+    #for i, post in enumerate(posts.itertuples(index=False), start=1):
+    #    print(f"{i}. {post.Title}")
+    '''
     while True:
         try:
             selection = int(input("Enter the number of the post you want to use: "))
@@ -64,13 +65,13 @@ if __name__ == '__main__':
                 print(f"Please enter a number between 1 and {num_posts}.")
         except ValueError:
             print("Invalid input. Please enter a valid number.")
+    '''
+    #selected_post = posts.iloc[selection - 1]
+    #title = selected_post.Title
+    #script = selected_post.Body
 
-    selected_post = posts.iloc[selection - 1]
-    title = selected_post.Title
-    script = selected_post.Body
-
-    title = "example title"
-    script = "example script with a few more words. For testing. coolio..."
+    title = "My bf cheated on me with my sister. What do I do"
+    script = "For context, this is an example script with a few more words. For testing. coolio..."
 
 
     # Choose a random title image
@@ -94,7 +95,7 @@ if __name__ == '__main__':
     video_with_audio = video_clip.set_audio(audio_clip)
     export_final_video(video_with_audio, output_path)
 
-    # Eleven Labs API integration
-    transcriber = VideoTranscriber(output_path, XI_API_KEY)
+# Eleven Labs API integration
+    transcriber = VideoTranscriber(output_path, XI_API_KEY, font_path=font_path)
     transcriber.transcribe_video(script, title=title)
     transcriber.create_video("final_output.mp4", title_image_path=title_image_path)
