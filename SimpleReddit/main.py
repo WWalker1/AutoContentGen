@@ -66,14 +66,20 @@ if __name__ == '__main__':
             print("Invalid input. Please enter a valid number.")
 
     selected_post = posts.iloc[selection - 1]
-    '''TODO: still working on getting the title included
     title = selected_post.Title
-    script = f"{title}\n\n{selected_post.Body}"
-    script = f"{title} Hi there. Just doing some testing to save time"
-    print(script)
-    '''
     script = selected_post.Body
-    script = "lotrs. of. periods. to see if the same. issue. is present. here...ok. cool, and, now done."
+
+    title = "example title"
+    script = "example script with a few more words. For testing. coolio..."
+
+
+    # Choose a random title image
+    titles_folder = "titles"
+    title_images = [f for f in os.listdir(titles_folder) if f.endswith(('.png', '.jpg', '.jpeg'))]
+    if title_images:
+        title_image_path = os.path.join(titles_folder, random.choice(title_images))
+    else:
+        title_image_path = None
 
     video_path = "background_videos/parkour.mp4"
     output_path = "output_video.mp4"
@@ -81,7 +87,8 @@ if __name__ == '__main__':
     XI_API_KEY = "a56e9c8f7a8ffe64d28b0069fc30ca22"
     
     audio_path = "tts_audio.mp3"
-    audio_clip = generate_tts_audio(script, audio_path, XI_API_KEY)
+    full_script = title + ". " + script
+    audio_clip = generate_tts_audio(full_script, audio_path, XI_API_KEY)
     video_clip = load_video_clip(video_path, audio_clip.duration)
 
     video_with_audio = video_clip.set_audio(audio_clip)
@@ -89,5 +96,5 @@ if __name__ == '__main__':
 
     # Eleven Labs API integration
     transcriber = VideoTranscriber(output_path, XI_API_KEY)
-    transcriber.transcribe_video(script)
-    transcriber.create_video("final_output.mp4")
+    transcriber.transcribe_video(script, title=title)
+    transcriber.create_video("final_output.mp4", title_image_path=title_image_path)
