@@ -4,6 +4,7 @@ import random
 from reddit_video_creator import pull_posts
 from reddit_video_creator import VideoTranscriber
 import requests
+import os 
 
 def generate_tts_audio(script, output_path, xi_api_key):
     url = "https://api.elevenlabs.io/v1/text-to-speech/21m00Tcm4TlvDq8ikWAM"
@@ -44,6 +45,18 @@ def export_final_video(final_clip, output_path):
     
     final_clip.write_videofile(output_path, fps=24, codec='libx264')
 
+def get_title_image_path(title, titles_folder):
+    # Extract the first three words from the title
+    first_three_words = " ".join(title.split()[:3])
+
+    # Construct the title image path
+    title_image_path = os.path.join(titles_folder, f"{first_three_words}.png")
+
+    # Check if the title image file exists
+    if os.path.isfile(title_image_path):
+        return title_image_path
+    else:
+        return None
 
 # Main script
 if __name__ == '__main__':
@@ -70,22 +83,18 @@ if __name__ == '__main__':
     #title = selected_post.Title
     #script = selected_post.Body
 
-    title = "My bf cheated on me with my sister. What do I do"
-    script = "For context, this is an example script with a few more words. For testing. coolio..."
+    title = "I Found Out My Husband Has a Second Family!."
+    script = "I always thought my husband and I had the perfect marriage. We shared everything, or so I believed. One day, while he was at work, I received a call from a woman claiming to be his wife. I was confused and thought it was a prank. But she started sharing details about his life that only I knew. My heart pounded as I listened. She sent me pictures of their 'family' vacations, birthdays, and even a second home I knew nothing about. My husband had been living a double life for years. When he came home that evening, I confronted him. The look on his face confirmed everything. My perfect marriage was nothing but a facade."
 
 
-    # Choose a random title image
+    # Chooses the title image based on the first 3 words 
     titles_folder = "titles"
-    title_images = [f for f in os.listdir(titles_folder) if f.endswith(('.png', '.jpg', '.jpeg'))]
-    if title_images:
-        title_image_path = os.path.join(titles_folder, random.choice(title_images))
-    else:
-        title_image_path = None
+    title_image_path = get_title_image_path(title, titles_folder)
 
     video_path = "background_videos/parkour.mp4"
     output_path = "output_video.mp4"
 
-    XI_API_KEY = "a56e9c8f7a8ffe64d28b0069fc30ca22"
+    XI_API_KEY = "sk_6f0e1024ea2a95099009ae623d7a65b2795200969d95f2a1"
     
     audio_path = "tts_audio.mp3"
     full_script = title + ". " + script
@@ -94,8 +103,8 @@ if __name__ == '__main__':
 
     video_with_audio = video_clip.set_audio(audio_clip)
     export_final_video(video_with_audio, output_path)
-
-# Eleven Labs API integration
+    
+    # Eleven Labs API integration
     transcriber = VideoTranscriber(output_path, XI_API_KEY, font_path=font_path)
     transcriber.transcribe_video(script, title=title)
     transcriber.create_video("final_output.mp4", title_image_path=title_image_path)
