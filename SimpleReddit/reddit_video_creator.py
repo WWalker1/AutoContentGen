@@ -65,7 +65,7 @@ class VideoTranscriber:
         print('Generating audio with Eleven Labs API')
         full_script = title + ". " + script if title else script
 
-        url = f"https://api.elevenlabs.io/v1/text-to-speech/21m00Tcm4TlvDq8ikWAM/with-timestamps"
+        url = f"https://api.elevenlabs.io/v1/text-to-speech/UeoNuANTaFCbgahlkXH8/with-timestamps"
         headers = {
             "Content-Type": "application/json",
             "xi-api-key": self.xi_api_key
@@ -228,4 +228,9 @@ class VideoTranscriber:
         
         clip = clip.set_audio(audio)
         clip.write_videofile(output_video_path, fps=original_fps)
-        os.system(f"rm -rf {image_folder}")
+
+        if os.path.exists(image_folder):
+            shutil.rmtree(image_folder)
+            print(f"Folder '{image_folder}' has been deleted successfully.")
+        else:
+            print(f"Folder '{image_folder}' does not exist.")
