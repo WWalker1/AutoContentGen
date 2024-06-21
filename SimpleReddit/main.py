@@ -91,8 +91,8 @@ if __name__ == '__main__':
     #title = selected_post.Title
     #script = selected_post.Body
 
-    title = "My Fiance's Shocking Double Life Revealed by a Stranger!"
-    script = "I was living a fairytale with my fiancé until a stranger approached me at a coffee shop. She told me she knew my fiancé and that he was living a double life. At first, I didn’t believe her, but she showed me pictures and messages that proved her story. I confronted him, and he admitted everything. He had been engaged to another woman in a different city. My world fell apart. I broke off the engagement and moved out. It’s been a struggle, but I’m slowly rebuilding my life. Always be cautious and listen to warning signs."
+    title = "He Proposed to Me and Another Woman on the Same Day!"
+    script = "He proposed to me in the most romantic way possible."
 
 
     # Chooses the title image based on the first 3 words 

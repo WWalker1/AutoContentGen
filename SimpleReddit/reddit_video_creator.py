@@ -1,6 +1,5 @@
 import praw
 import pandas as pd
-import whisper
 import os
 import shutil
 import cv2
@@ -143,9 +142,10 @@ class VideoTranscriber:
 
         title_image = None
         if title_image_path and os.path.exists(title_image_path):
-            title_image = cv2.imread(title_image_path)
+            # Read the image with PIL to preserve alpha channel
+            title_image = Image.open(title_image_path).convert('RGBA')
             # Resize title image to fit the frame with a small margin
-            img_height, img_width = title_image.shape[:2]
+            img_width, img_height = title_image.size
             aspect_ratio = img_width / img_height
             margin = 50  # pixels of margin on each side
             if aspect_ratio > frame_width / frame_height:
@@ -154,7 +154,7 @@ class VideoTranscriber:
             else:
                 new_height = frame_height - 2 * margin
                 new_width = int(new_height * aspect_ratio)
-            title_image = cv2.resize(title_image, (new_width, new_height))
+            title_image = title_image.resize((new_width, new_height), Image.LANCZOS)
 
         while True:
             ret, frame = cap.read()
@@ -162,16 +162,18 @@ class VideoTranscriber:
                 break
 
             if title_image is not None and N_frames <= self.title_text_array[-1][2]:
-                # Center the title image on the frame
-                y_offset = (frame_height - title_image.shape[0]) // 2
-                x_offset = (frame_width - title_image.shape[1]) // 2
-                
-                # Create a mask for the title image
-                mask = np.zeros((title_image.shape[0], title_image.shape[1]), dtype=np.uint8)
-                mask[:] = 255  # Set all pixels to 255 (fully opaque)
+                # Convert frame to PIL Image
+                frame_pil = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
 
-                # Apply the mask to blend the title image with the frame
-                frame[y_offset:y_offset+title_image.shape[0], x_offset:x_offset+title_image.shape[1]] = cv2.bitwise_and(title_image, title_image, mask=mask)
+                # Center the title image on the frame
+                y_offset = (frame_height - title_image.size[1]) // 2
+                x_offset = (frame_width - title_image.size[0]) // 2
+
+                # Paste the title image onto the frame, using the alpha channel as mask
+                frame_pil.paste(title_image, (x_offset, y_offset), title_image)
+
+                # Convert back to OpenCV format
+                frame = cv2.cvtColor(np.array(frame_pil), cv2.COLOR_RGB2BGR)
             else:
                 for i in self.text_array:
                     if N_frames >= i[1] and N_frames <= i[2]:
