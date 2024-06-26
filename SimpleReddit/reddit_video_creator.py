@@ -8,6 +8,14 @@ from tqdm import tqdm
 import base64, json, requests
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
+import librosa
+import soundfile as sf 
+import pyrubberband as pyrb
+from pydub import AudioSegment
+
+
+os.environ['RUBBERBAND'] = r'C:\Users\22wes\Downloads\rubberband-3.3.0-gpl-executable-windows\rubberband-3.3.0-gpl-executable-windows\rubberband.exe'
+
 '''
 Params: 
 1. subreddit -> subreddit that it will pull posts from
@@ -51,7 +59,7 @@ OUTLINE_COLOR = (0, 0, 0)  # Black color
 OUTLINE_THICKNESS = 5
 
 class VideoTranscriber:
-    def __init__(self, video_path, xi_api_key, font_path=None):
+    def __init__(self, video_path, xi_api_key, font_path=None, speed=1.0):
         self.video_path = video_path
         self.audio_path = os.path.join(os.path.dirname(self.video_path), "tts_audio.mp3")
         self.text_array = []
@@ -59,6 +67,7 @@ class VideoTranscriber:
         self.fps = 0
         self.xi_api_key = xi_api_key
         self.font = ImageFont.truetype(font_path, FONT_SIZE) if font_path and os.path.exists(font_path) else None
+        self.speed = speed
 
     def transcribe_video(self, script, title=None):
         print('Generating audio with Eleven Labs API')
@@ -75,7 +84,7 @@ class VideoTranscriber:
             "voice_settings": {
                 "stability": 0.5,
                 "similarity_boost": 0.75
-            } 
+            }
         }
 
         response = requests.post(url, json=data, headers=headers)
@@ -83,12 +92,18 @@ class VideoTranscriber:
 
         response_dict = response.json()
         audio_bytes = base64.b64decode(response_dict["audio_base64"])
+        
+        # Save the original audio
         with open(self.audio_path, 'wb') as f:
             f.write(audio_bytes)
 
         words = response_dict['alignment']['characters']
         start_times = response_dict['alignment']['character_start_times_seconds']
         end_times = response_dict['alignment']['character_end_times_seconds']
+
+        # Adjust timings based on speed
+        start_times = [t / self.speed for t in start_times]
+        end_times = [t / self.speed for t in end_times]
 
         video = cv2.VideoCapture(self.video_path)
         self.fps = video.get(cv2.CAP_PROP_FPS)
@@ -99,6 +114,28 @@ class VideoTranscriber:
         self.text_array = self.process_text(words[title_end_index:], start_times[title_end_index:], end_times[title_end_index:])
         print('Audio generation complete')
 
+        # Speed up the audio
+        self.speed_up_audio()
+
+    def speed_up_audio(self):
+        temp_wav_path = self.audio_path.replace(".mp3", "_temp.wav")
+        
+        # Load the audio file
+        y, sr = sf.read(self.audio_path)
+        
+        # Speed up the audio using pyrubberband
+        y_fast = pyrb.time_stretch(y, sr, self.speed)
+        
+        # Save the sped-up audio as a WAV file
+        sf.write(temp_wav_path, y_fast, sr)
+        
+        # Convert WAV to MP3 using pydub
+        audio_segment = AudioSegment.from_wav(temp_wav_path)
+        audio_segment.export(self.audio_path, format="mp3")
+        
+        # Remove the temporary WAV file
+        os.remove(temp_wav_path)
+        
     def process_text(self, words, start_times, end_times):
         text_array = []
         current_word = ""

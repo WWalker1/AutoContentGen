@@ -8,9 +8,15 @@ import os
 import noisereduce as nr
 import librosa
 import soundfile as sf 
+from pydub import AudioSegment
+import numpy as np 
+import io 
+
+os.environ['RUBBERBAND'] = r'C:\Users\22wes\Downloads\rubberband-3.3.0-gpl-executable-windows\rubberband-3.3.0-gpl-executable-windows\rubberband.exe'
+# run each session: $env:PATH += ";C:\Users\22wes\Downloads\rubberband-3.3.0-gpl-executable-windows\rubberband-3.3.0-gpl-executable-windows"
 
 def generate_tts_audio(script, output_path, xi_api_key):
-    url = "https://api.elevenlabs.io/v1/text-to-speech/21m00Tcm4TlvDq8ikWAM"
+    url = "https://api.elevenlabs.io/v1/text-to-speech/t0vOBj9vM05sKhNrB81C"
     headers = {
         "Accept": "audio/mpeg",
         "Content-Type": "application/json",
@@ -27,15 +33,31 @@ def generate_tts_audio(script, output_path, xi_api_key):
     response = requests.post(url, json=data, headers=headers)
     response.raise_for_status()
 
-    with open(output_path, "wb") as f:
-        f.write(response.content)
+    # Convert to AudioSegment
+    audio = AudioSegment.from_mp3(io.BytesIO(response.content))
+
+    # Convert to numpy array for noise reduction
+    samples = np.array(audio.get_array_of_samples())
+    
+    # Ensure the array is float32 and scaled to [-1, 1]
+    samples = samples.astype(np.float32) / np.iinfo(samples.dtype).max
 
     # Apply noise reduction
-    audio_data, sample_rate = librosa.load(output_path)
-    reduced_noise_audio = nr.reduce_noise(y=audio_data, sr=sample_rate)
+    reduced_noise_audio = nr.reduce_noise(y=samples, sr=audio.frame_rate)
 
-    # Save the reduced noise audio using soundfile
-    sf.write(output_path, reduced_noise_audio, sample_rate)
+    # Scale back to int16 range
+    reduced_noise_audio = (reduced_noise_audio * np.iinfo(np.int16).max).astype(np.int16)
+
+    # Convert back to AudioSegment
+    reduced_audio = AudioSegment(
+        reduced_noise_audio.tobytes(),
+        frame_rate=audio.frame_rate,
+        sample_width=reduced_noise_audio.dtype.itemsize,
+        channels=audio.channels
+    )
+
+    # Export as MP3
+    reduced_audio.export(output_path, format="mp3")
 
     return AudioFileClip(output_path)
 
@@ -91,8 +113,8 @@ if __name__ == '__main__':
     #title = selected_post.Title
     #script = selected_post.Body
 
-    title = "He Proposed to Me and Another Woman on the Same Day!"
-    script = "He proposed to me in the most romantic way possible."
+    title = "I (22M) surprise visited girlfriend (22F) and walked in on her watching TV in bed with her guy friend. What should I do?"
+    script = "Yesterday I wanted to surprise my girlfriend a day early because she was having a rough week with things. I showed up unannounced and walked in on her laying on the bed with one of her guy friends. They were both fully clothed and not cuddling in bed, but the lights were off in the room with the door slightly shut. This was upsetting to me and I am not sure what to do. She assures me that they did nothing together and she would never do anything like that. She felt really remorseful last night and was crying begging me to stay. The whole thing threw me off and really was unsettling for me. She told me that he came over to talk about the problems she was having this week and then they started watching TV after. We were supposed to call before bed 30 minutes after I showed up because she thought I was at home. She never told me she was having him over or anything and swears that she would have told me when we called to say goodnight. I am sorry if I ranted, but this is still fresh in my head. Thanks. Edit: When asked why she did it and didn’t think of me, she told me that it was because she wasn’t thinking with everything going on this week (stress, friends issues, etc). She also thought that it would have been ok because she sees him as nothing more than a friend and she “doesn’t see him like that"
 
 
     # Chooses the title image based on the first 3 words 
@@ -112,7 +134,8 @@ if __name__ == '__main__':
     video_with_audio = video_clip.set_audio(audio_clip)
     export_final_video(video_with_audio, output_path)
     
-    # Eleven Labs API integration
-    transcriber = VideoTranscriber(output_path, XI_API_KEY, font_path=font_path)
+    # Eleven Labs API integration with speed parameter
+    speed = 1.2  # Adjust this value to change the speed (e.g., 1.2 for 20% faster)
+    transcriber = VideoTranscriber(output_path, XI_API_KEY, font_path=font_path, speed=speed)
     transcriber.transcribe_video(script, title=title)
-    transcriber.create_video("final_output.mp4", title_image_path=title_image_path)
+    transcriber.create_video("final_output_1.2x.mp4", title_image_path=title_image_path)
